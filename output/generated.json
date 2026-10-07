@@ -1,0 +1,378 @@
+[
+  {
+    "id": "TC-001",
+    "test_case": {
+      "title": "Account locks after 5 consecutive failed login attempts",
+      "category": "functional",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: The user account is active and not locked"
+      ],
+      "steps": [
+        "Attempt to log in with 5 incorrect passwords consecutively"
+      ],
+      "test_data": {
+        "password": "wrongpassword"
+      },
+      "expected_result": "The account becomes locked and displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-002",
+    "test_case": {
+      "title": "Successful login resets the failed attempt counter",
+      "category": "functional",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: The user account is locked after 5 consecutive failed login attempts"
+      ],
+      "steps": [
+        "Attempt to log in with the correct password"
+      ],
+      "test_data": {
+        "password": "correctpassword"
+      },
+      "expected_result": "The account becomes unlocked and the failed attempt counter resets to zero.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-003",
+    "test_case": {
+      "title": "Account displays a message instructing the user to check their email to unlock it",
+      "category": "functional",
+      "priority": "medium",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: The user account is locked after 5 consecutive failed login attempts"
+      ],
+      "steps": [
+        "Attempt to log in with the locked account"
+      ],
+      "test_data": {
+        "password": "wrongpassword"
+      },
+      "expected_result": "The account displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-004",
+    "test_case": {
+      "title": "Account locks after 5 consecutive failed login attempts",
+      "category": "functional",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: The user account is active and not locked"
+      ],
+      "steps": [
+        "Attempt to log in with 5 incorrect passwords consecutively"
+      ],
+      "test_data": {
+        "password": "wrongpassword"
+      },
+      "expected_result": "The account becomes locked and displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-005",
+    "test_case": {
+      "title": "Account lock after 5 failed attempts",
+      "category": "negative",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "An account with a password is created",
+        "The user enters incorrect password 5 times consecutively"
+      ],
+      "steps": [
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password"
+      ],
+      "test_data": {
+        "password": "wrong_password"
+      },
+      "expected_result": "The account is locked and a message instructing the user to check their email to unlock it or wait 30 minutes is displayed.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-006",
+    "test_case": {
+      "title": "Account remains unlocked after successful login",
+      "category": "negative",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "An account with a password is created",
+        "The user enters incorrect password 5 times consecutively",
+        "The user enters the correct password"
+      ],
+      "steps": [
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter correct password"
+      ],
+      "test_data": {
+        "password": "correct_password"
+      },
+      "expected_result": "The failed attempt counter is reset to zero.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-007",
+    "test_case": {
+      "title": "Account lock after 1 failed attempt",
+      "category": "negative",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "An account with a password is created"
+      ],
+      "steps": [
+        "Enter incorrect password"
+      ],
+      "test_data": {
+        "password": "wrong_password"
+      },
+      "expected_result": "The account is locked and a message instructing the user to check their email to unlock it or wait 30 minutes is displayed.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-008",
+    "test_case": {
+      "title": "Account lock after 6 failed attempts",
+      "category": "negative",
+      "priority": "medium",
+      "source_ref": "US-01",
+      "preconditions": [
+        "An account with a password is created"
+      ],
+      "steps": [
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password",
+        "Enter incorrect password"
+      ],
+      "test_data": {
+        "password": "wrong_password"
+      },
+      "expected_result": "The account is locked and a message instructing the user to check their email to unlock it or wait 30 minutes is displayed.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-009",
+    "test_case": {
+      "title": "Account Lockout with Rapid Consecutive Failed Attempts",
+      "category": "edge",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: User account is initially unlocked"
+      ],
+      "steps": [
+        "Enter incorrect password 5 times consecutively within a short period (e.g., less than 1 minute)",
+        "Attempt to login again"
+      ],
+      "test_data": {
+        "password": "wrongpassword"
+      },
+      "expected_result": "Account is locked and displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-010",
+    "test_case": {
+      "title": "Account Lockout with Correct Password After Failed Attempts",
+      "category": "edge",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: User account is initially unlocked"
+      ],
+      "steps": [
+        "Enter incorrect password 5 times consecutively",
+        "Enter correct password"
+      ],
+      "test_data": {
+        "password": "correctpassword"
+      },
+      "expected_result": "Account is unlocked and the failed attempt counter is reset to zero.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-011",
+    "test_case": {
+      "title": "Account Lockout with Special Characters in Password",
+      "category": "edge",
+      "priority": "medium",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: User account is initially unlocked"
+      ],
+      "steps": [
+        "Enter incorrect password with special characters (e.g., 'wrongpass@123') 5 times consecutively",
+        "Attempt to login again"
+      ],
+      "test_data": {
+        "password": "wrongpass@123"
+      },
+      "expected_result": "Account is locked and displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-012",
+    "test_case": {
+      "title": "Account Lockout with Interrupted Login Flow",
+      "category": "edge",
+      "priority": "low",
+      "source_ref": "US-01",
+      "preconditions": [
+        "Assumption: User account is initially unlocked"
+      ],
+      "steps": [
+        "Enter incorrect password 3 times consecutively",
+        "Attempt to login again",
+        "Wait for 30 minutes",
+        "Attempt to login again"
+      ],
+      "test_data": {
+        "password": "wrongpassword"
+      },
+      "expected_result": "Account is unlocked after 30 minutes and the failed attempt counter is reset to zero.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-013",
+    "test_case": {
+      "title": "Account Lockout After 4 Failed Attempts",
+      "category": "boundary",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "User account is active"
+      ],
+      "steps": [
+        "Attempt to log in with incorrect password 4 times consecutively"
+      ],
+      "test_data": {
+        "failed_attempts": 4
+      },
+      "expected_result": "Account is locked and displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-014",
+    "test_case": {
+      "title": "Account Lockout After 5 Failed Attempts",
+      "category": "boundary",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "User account is active"
+      ],
+      "steps": [
+        "Attempt to log in with incorrect password 5 times consecutively"
+      ],
+      "test_data": {
+        "failed_attempts": 5
+      },
+      "expected_result": "Account is locked and displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-015",
+    "test_case": {
+      "title": "Account Unlock After Successful Login After 5 Failed Attempts",
+      "category": "boundary",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "User account is locked after 5 failed attempts"
+      ],
+      "steps": [
+        "Attempt to log in with correct password after account is locked"
+      ],
+      "test_data": {
+        "correct_password": "user's actual password"
+      },
+      "expected_result": "Account is unlocked and the failed attempt counter is reset to zero.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  },
+  {
+    "id": "TC-016",
+    "test_case": {
+      "title": "Account Lockout After 6 Failed Attempts",
+      "category": "boundary",
+      "priority": "high",
+      "source_ref": "US-01",
+      "preconditions": [
+        "User account is active"
+      ],
+      "steps": [
+        "Attempt to log in with incorrect password 6 times consecutively"
+      ],
+      "test_data": {
+        "failed_attempts": 6
+      },
+      "expected_result": "Account is locked and displays a message instructing the user to check their email to unlock it or wait 30 minutes.",
+      "api": null
+    },
+    "status": "pending",
+    "flags": []
+  }
+]
