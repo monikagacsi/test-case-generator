@@ -62,7 +62,8 @@ python -m streamlit run app.py
 Try the included [user story samples](./samples/) or
 [Pet Store OpenAPI sample](./samples/petstore_openapi.yaml).
 
-![Test Case Generator app preview](./docs/images/app-preview.png)
+<img width="770" height="742" alt="test-gen-img" src="https://github.com/user-attachments/assets/64471e68-1aec-4842-a304-9f3e4f38acb5" />
+
 
 ## Validation
 
