@@ -1,22 +1,61 @@
 import re
 import sys
+from uuid import uuid4
 from collections import Counter
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 ID_PATTERN = re.compile(r"\b([A-Za-z]{1,6}-\d+)\b")
 HEADING = re.compile(r"^(#{1,6})\s+(.*\S)\s*$")
 NUMBERED = re.compile(r"^\s*\d+[.)]\s+(.*\S)\s*$")
 LEADING_NUM = re.compile(r"^\s*(\d+)[.)]\s*")
 RULE = re.compile(r"^\s*(-{3,}|\*{3,}|_{3,})\s*$")
+MAX_STORY_TITLE_CHARS = 200
+MAX_STORY_TEXT_CHARS = 900
+MAX_IMPORTED_STORY_TEXT_CHARS = 10_000
+UNSAFE_STORY_PATTERNS = (
+    re.compile(
+        r"""(?:['"]\s*(?:OR|AND)\s+['"]?\w+['"]?\s*=\s*['"]?\w+|"""
+        r"""(?:\bOR\b|\bAND\b)\s+\d+\s*=\s*\d+)""",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bUNION\s+(?:ALL\s+)?SELECT\b", re.IGNORECASE),
+    re.compile(r"\b(?:DROP|TRUNCATE)\s+(?:TABLE|DATABASE)\b", re.IGNORECASE),
+    re.compile(r"\bDELETE\s+FROM\s+\w+", re.IGNORECASE),
+    re.compile(r"\bINSERT\s+INTO\s+\w+", re.IGNORECASE),
+    re.compile(r"\bUPDATE\s+\w+\s+SET\b", re.IGNORECASE),
+    re.compile(
+        r"""(?:;\s*--|/\*.*?\*/|['"]\s*(?:--|#|/\*)|['"]\s*;\s*--)""",
+        re.IGNORECASE,
+    ),
+    re.compile(r"<\s*(?:script|iframe|object|embed)\b", re.IGNORECASE),
+    re.compile(r"\bjavascript\s*:", re.IGNORECASE),
+    re.compile(r"\bon[a-z]+\s*=\s*['\"]?", re.IGNORECASE),
+    re.compile(r"\b(?:eval|exec|__import__)\s*\(", re.IGNORECASE),
+    re.compile(r"(?:^|[;&|]\s*)(?:sudo\s+)?rm\s+-rf\b", re.IGNORECASE),
+    re.compile(r"\b(?:curl|wget)\b[^\n|]*\|\s*(?:sh|bash)\b", re.IGNORECASE),
+)
+UNSAFE_STORY_MESSAGE = (
+    "Story content contains a potentially executable code or injection pattern. "
+    "Remove the payload and describe the expected behavior in plain language."
+)
+
+
+def _validate_story_input(*values: str) -> None:
+    if any(
+        pattern.search(value)
+        for value in values
+        for pattern in UNSAFE_STORY_PATTERNS
+    ):
+        raise ValueError(UNSAFE_STORY_MESSAGE)
 
 
 class Story(BaseModel):
-    id: str
-    title: str
-    text: str
-    domain: str = ""
+    id: str = Field(min_length=1, max_length=64)
+    title: str = Field(min_length=1, max_length=MAX_STORY_TITLE_CHARS)
+    text: str = Field(min_length=1)
+    domain: str = Field(default="", max_length=MAX_STORY_TITLE_CHARS)
 
 
 # (heading text, body lines, domain)
@@ -69,11 +108,49 @@ def _blocks_by_paragraph(text: str) -> list[Block]:
     return [(p.splitlines()[0], p.splitlines()[1:], "") for p in paras]
 
 
+def _labeled_user_story_block(text: str) -> Block | None:
+    lines = text.splitlines()
+    label_pattern = re.compile(r"^\s*\*\*User Story:\*\*\s*(.*)$", re.IGNORECASE)
+    label = next(
+        (
+            (index, match)
+            for index, line in enumerate(lines)
+            if (match := label_pattern.match(line))
+        ),
+        None,
+    )
+    if label is None:
+        return None
+
+    label_index, match = label
+    story_lines = [match.group(1).strip()] if match.group(1).strip() else []
+    for line in lines[label_index + 1:]:
+        stripped = line.strip()
+        if not stripped:
+            if story_lines:
+                break
+            continue
+        if re.match(r"^\*{0,2}Acceptance Criteria:\*{0,2}$", stripped, re.IGNORECASE):
+            break
+        story_lines.append(stripped)
+
+    story_sentence = " ".join(story_lines)
+    title = re.sub(r"\*\*(.*?)\*\*", r"\1", story_sentence).strip()
+    title = re.sub(r"\s+", " ", title)[:MAX_STORY_TITLE_CHARS].strip()
+    body = "\n".join(
+        line for index, line in enumerate(lines)
+        if index != label_index
+    ).strip()
+    return (title or "User Story", body.splitlines(), "")
+
+
 def parse_stories(text: str) -> list[Story]:
     lines = text.splitlines()
+    labeled_story = _labeled_user_story_block(text)
     blocks = (
         _blocks_by_heading(lines)
         or _blocks_by_number(lines)
+        or ([labeled_story] if labeled_story is not None else [])
         or _blocks_by_paragraph(text)
     )
 
@@ -96,10 +173,39 @@ def parse_stories(text: str) -> list[Story]:
 
         if not title:
             title = (body or head)[:60]
+        story_text = f"{title}\n{body}".strip()
+        if len(story_text) > (
+            MAX_IMPORTED_STORY_TEXT_CHARS + MAX_STORY_TITLE_CHARS + 1
+        ):
+            raise ValueError(
+                "Each Markdown user story must be "
+                f"{MAX_IMPORTED_STORY_TEXT_CHARS:,} characters or fewer."
+            )
+        _validate_story_input(title, body, domain)
         stories.append(
-            Story(id=story_id, title=title, text=f"{title}\n{body}".strip(), domain=domain)
+            Story(id=story_id, title=title, text=story_text, domain=domain)
         )
     return stories
+
+
+def story_from_text(title: str, text: str) -> Story:
+    """Create one uniquely identified story from user-provided text."""
+    normalized_title = title.strip()
+    normalized_text = text.strip()
+    if not normalized_title:
+        raise ValueError("A user story title is required.")
+    if not normalized_text:
+        raise ValueError("User story text cannot be empty.")
+    if len(normalized_text) > MAX_STORY_TEXT_CHARS:
+        raise ValueError(
+            f"User story text must be {MAX_STORY_TEXT_CHARS:,} characters or fewer."
+        )
+    _validate_story_input(normalized_title, normalized_text)
+    return Story(
+        id=f"US-TEXT-{uuid4().hex[:8]}",
+        title=normalized_title,
+        text=f"{normalized_title}\n{normalized_text}",
+    )
 
 
 def load_stories(path: str | Path) -> list[Story]:
