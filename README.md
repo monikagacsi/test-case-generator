@@ -1,26 +1,128 @@
-# test-case-generator
+# Test Case Generator
 
-Generate functional, negative, edge, and boundary test cases from Markdown User
-Stories with Gemini or a local Ollama model.
+Turn user stories and OpenAPI 3 specifications into reviewable test cases.
+The Streamlit app generates functional, negative, edge, boundary, and API cases
+with Gemini or a local Ollama model, then stores them in a SQLite review queue
+for human review and export.
+
+## The problem
+
+Writing thorough tests from product requirements is time-consuming, and
+AI-generated cases need validation and human review before use. This project
+generates structured cases with expected results paired to every step, flags
+likely duplicates and low-value cases, and keeps approval and export under
+reviewer control.
+
+## App preview
+
+![Test Case Generator app preview](./docs/images/app-preview.png)
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Markdown user stories] --> B[Input parsing and safety checks]
+    C[OpenAPI 3 YAML or JSON] --> D[OpenAPI parser]
+    B --> E[Generation service]
+    D --> E
+    E --> F[Gemini or Ollama]
+    F --> G[Schema validation and retries]
+    G --> H[Duplicate and quality heuristics]
+    H --> I[SQLite review queue]
+    I --> J[Streamlit review UI]
+    J --> K[JSON, CSV, Markdown exports]
+```
+
+## Quickstart
+
+Requires Python 3.10 or later and a Gemini API key, or a locally running Ollama
+installation.
+
+```sh
+python -m pip install -r requirements.txt
+```
+
+Set the provider in `.env` (or in your shell). For Gemini:
+
+```dotenv
+LLM_PROVIDER=gemini
+LLM_API_KEY=your-gemini-api-key
+```
+
+Start the app:
+
+```sh
+python -m streamlit run app.py
+```
+
+In **Test Generator**, paste a story or upload one of the included Markdown
+samples. Each story can generate up to 10 cases total across its categories.
+Cases are saved to the local `output/review_queue.sqlite3` database, where you
+can filter, review, accept, reject, edit, and export them.
+
+To try the API workflow, upload [`petstore_openapi.yaml`](./samples/petstore_openapi.yaml)
+under **Generate API tests from an OpenAPI spec**.
+
+### Sample inputs
+
+The [`samples/`](./samples/) folder contains:
+
+- [`example_user_story001.md`](./samples/example_user_story001.md) — guest checkout.
+- [`example_user_story002.md`](./samples/example_user_story002.md) — transaction round-ups.
+- [`example_user_story003.md`](./samples/example_user_story003.md) — bulk role updates.
+- [`example_user_story004.md`](./samples/example_user_story004.md) — accessible analytics.
+- [`example_user_story005.md`](./samples/example_user_story005.md) — collaborative editing.
+- [`petstore_openapi.yaml`](./samples/petstore_openapi.yaml) — a small API contract.
+
+Stories in one uploaded Markdown file become separate Test Case Groups, each
+with its own 10-case maximum.
+
+## Tests and evaluation
+
+Run the offline suite locally:
+
+```sh
+python -m pip install -r requirements.txt
+python -m pytest -q
+```
+
+GitHub Actions runs this command on pushes, pull requests, and manual dispatch.
+The suite covers schema validation, expected-result/step pairing, deduplication,
+quality heuristics, storage, OpenAPI parsing, and exports. LLM calls are mocked,
+so tests do not require credentials or incur API usage.
+
+Latest local result: **93 tests passed**. This is a deterministic software test
+result, not a benchmark of generated-case quality; no live-model quality
+evaluation has been conducted yet.
+
+## Limitations and roadmap
+
+- Generated cases can be incomplete or incorrect; review them before using them.
+- Duplicate and low-value checks are heuristics and can produce false positives
+  or miss issues.
+- Model output varies by provider and model. Live-model quality and cost are not
+  currently benchmarked.
+- Story content is sent to the configured provider. Avoid secrets and sensitive
+  data; input safety checks are heuristic, not a security boundary.
+- OpenAPI support targets version 3 and currently resolves local references.
+- Next steps: add a repeatable live-model evaluation set, capture a short UI
+  demo, and optionally deploy a public demo with non-sensitive sample data.
 
 ## Run with Gemini
 
-1. Install dependencies with `python -m pip install -r requirements.txt`.
-2. Set `LLM_PROVIDER=gemini` and your `LLM_API_KEY` in `.env`.
-3. Generate cases for one story or all stories:
+The command-line generator remains available for Markdown stories:
 
-   ```sh
-   python -m testgen.generate samples/user_stories.md US-01
-   python -m testgen.generate samples/user_stories.md all
-   ```
+```sh
+python -m testgen.generate samples/example_user_story001.md all
+```
 
-The generated cases are written to `output/generated.json`. Each case includes
+Generated cases are written to `output/generated.json`. Each case includes
 flags for likely duplicates within the same story and low-value cases, such as
 vague expected results, fewer than two meaningful steps, or boundary tests
 without concrete test data. These flags are prompts for review, not automatic
 rejections. Cases are also persisted in the SQLite review queue at
 `output/review_queue.sqlite3`, so generation results remain available after
-restarting the app. Run the tests with `python -m pytest`.
+restarting the app.
 
 Temporary Gemini 503 availability errors are retried with backoff. If the
 service remains unavailable after retries, generation automatically falls back
